@@ -1,4 +1,4 @@
-name: Issue labels and project sync
+name: Issue labels sync
 
 on:
   issues:
@@ -63,7 +63,7 @@ jobs:
             }
 
             function extractSection(label) {
-              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const escaped = label.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
               const regex = new RegExp(`^### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |$)`, "m");
               const match = body.match(regex);
               return match ? match[1].trim() : "";
@@ -153,153 +153,3 @@ jobs:
                 labels: labelsToAdd
               });
             }
-
-            const priorityRaw = extractSection("Priority");
-            const priorityMap = {
-              "Critical - blocks core usage": "P0",
-              "High - major problem": "P1",
-              "Medium - clear issue": "P2",
-              "Low - minor issue": "P3",
-              "Very low - minimal impact": "P4",
-              "Backlog - low impact bug": "P5",
-
-              "Critical - required for release": "P0",
-              "High - strong user value": "P1",
-              "Medium - important improvement": "P2",
-              "Low - useful enhancement": "P3",
-              "Very low - minor enhancement": "P4",
-              "Backlog - future idea": "P5"
-            };
-
-            core.setOutput("priority", priorityMap[priorityRaw] || "");
-
-      - name: Add issue to project and sync project Priority
-        if: ${{ secrets.ISSUE_TRACKER_PROJECT_ID != '' && secrets.ISSUE_TRACKER_PROJECT_TOKEN != '' }}
-        uses: actions/github-script@v8
-        env:
-          PROJECT_ID: ${{ secrets.ISSUE_TRACKER_PROJECT_ID }}
-          PRIORITY_VALUE: ${{ steps.labels.outputs.priority }}
-        with:
-          github-token: ${{ secrets.ISSUE_TRACKER_PROJECT_TOKEN }}
-          script: |
-            const projectId = process.env.PROJECT_ID;
-            const priorityValue = process.env.PRIORITY_VALUE || "";
-            const issueNodeId = context.payload.issue.node_id;
-
-            async function getExistingProjectItem(projectId, issueNodeId) {
-              const result = await github.graphql(`
-                query ($issueId: ID!) {
-                  node(id: $issueId) {
-                    ... on Issue {
-                      projectItems(first: 100) {
-                        nodes {
-                          id
-                          project {
-                            id
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              `, {
-                issueId: issueNodeId
-              });
-
-              const items = result.node?.projectItems?.nodes || [];
-              const existing = items.find(item => item.project?.id === projectId);
-              return existing ? existing.id : "";
-            }
-
-            let itemId = await getExistingProjectItem(projectId, issueNodeId);
-
-            if (!itemId) {
-              const addResult = await github.graphql(`
-                mutation AddItem($projectId: ID!, $contentId: ID!) {
-                  addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
-                    item {
-                      id
-                    }
-                  }
-                }
-              `, {
-                projectId,
-                contentId: issueNodeId
-              });
-
-              itemId = addResult.addProjectV2ItemById.item.id;
-            }
-
-            if (!priorityValue) {
-              core.info("No project Priority update was needed for this issue.");
-              return;
-            }
-
-            const fieldResult = await github.graphql(`
-              query ProjectFields($projectId: ID!) {
-                node(id: $projectId) {
-                  ... on ProjectV2 {
-                    fields(first: 50) {
-                      nodes {
-                        ... on ProjectV2FieldCommon {
-                          id
-                          name
-                        }
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          options {
-                            id
-                            name
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `, {
-              projectId
-            });
-
-            const fields = fieldResult.node.fields.nodes || [];
-            const priorityField = fields.find(field => field.name === "Priority" && Array.isArray(field.options));
-
-            if (!priorityField) {
-              core.setFailed('The project field named "Priority" was not found.');
-              return;
-            }
-
-            const matchingOption = priorityField.options.find(option => option.name === priorityValue);
-
-            if (!matchingOption) {
-              core.setFailed(`The project Priority option "${priorityValue}" was not found.`);
-              return;
-            }
-
-            await github.graphql(`
-              mutation SetPriority(
-                $projectId: ID!,
-                $itemId: ID!,
-                $fieldId: ID!,
-                $optionId: String!
-              ) {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: $projectId,
-                    itemId: $itemId,
-                    fieldId: $fieldId,
-                    value: { singleSelectOptionId: $optionId }
-                  }
-                ) {
-                  projectV2Item {
-                    id
-                  }
-                }
-              }
-            `, {
-              projectId,
-              itemId,
-              fieldId: priorityField.id,
-              optionId: matchingOption.id
-            });
