@@ -1,0 +1,142 @@
+name: Feature request (Linux)
+description: Suggest a Linux-related feature or improvement
+title: "[FEATURE][Linux] "
+labels:
+  - needs-review
+  - feature
+  - linux
+assignees:
+  - Wulgryn
+projects: "Wulgryn/9"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for Linux-specific feature requests.
+
+  - type: textarea
+    id: feature-summary
+    attributes:
+      label: Feature summary
+      description: Briefly describe the feature you want.
+      placeholder: |
+        Add validation so empty searches cannot be started.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: Which part is this request most likely related to?
+      options:
+        - Not sure
+        - Frontend
+        - Backend
+    validations:
+      required: true
+
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Distribution
+      description: Select the Linux distribution this feature relates to.
+      options:
+        - Ubuntu
+        - Fedora
+        - Arch Linux
+        - Debian
+        - Linux Mint
+        - Pop!_OS
+        - openSUSE
+        - Nobara
+        - Other...
+    validations:
+      required: true
+
+  - type: input
+    id: other-distribution
+    attributes:
+      label: Other distribution
+      description: If you selected "Other...", write the distribution name here.
+      placeholder: e.g. CachyOS, EndeavourOS, Bazzite
+    validations:
+      required: false
+
+  - type: dropdown
+    id: desktop-environment
+    attributes:
+      label: Desktop environment
+      description: Useful if the feature is desktop-environment specific.
+      options:
+        - GNOME
+        - KDE Plasma
+        - Xfce
+        - Cinnamon
+        - MATE
+        - LXQt
+        - Sway
+        - Hyprland
+        - Other...
+    validations:
+      required: false
+
+  - type: input
+    id: other-desktop-environment
+    attributes:
+      label: Other desktop environment
+      description: If you selected "Other...", write the desktop environment here.
+      placeholder: e.g. Budgie, COSMIC, i3
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Choose how urgent this is. This will be synced to the project Priority field.
+      options:
+        - Backlog - future idea
+        - Very low - minor enhancement
+        - Low - useful enhancement
+        - Medium - important improvement
+        - High - strong user value
+        - Critical - required for release
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem would this feature solve?
+      placeholder: |
+        Users can accidentally start invalid or empty searches, which may waste resources.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe how you would like it to work.
+      placeholder: |
+        Prevent starting a search if the search term is empty, and show a clear validation message.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe alternative solutions or workarounds you considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add anything else that may help.
+    validations:
+      required: false

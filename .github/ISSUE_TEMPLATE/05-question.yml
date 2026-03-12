@@ -1,0 +1,73 @@
+name: Question
+description: Ask a question about behavior or usage
+title: "[QUESTION] "
+labels:
+  - needs-review
+  - question
+assignees:
+  - Wulgryn
+projects: "Wulgryn/9"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for general questions.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What would you like to know?
+      placeholder: |
+        How is deleting a saved search supposed to behave while a search is running?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: Which part is this most likely related to?
+      options:
+        - Not sure
+        - Frontend
+        - Backend
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      description: Select your OS if relevant.
+      options:
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: false
+
+  - type: input
+    id: other-os
+    attributes:
+      label: Other OS
+      description: If you selected "Other", write the OS name here.
+      placeholder: e.g. macOS 15 or FreeBSD
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-you-tried
+    attributes:
+      label: What you already tried
+      description: Tell what you already checked or tested.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add logs, screenshots, links, or extra details if needed.
+    validations:
+      required: false

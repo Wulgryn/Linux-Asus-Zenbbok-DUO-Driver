@@ -1,0 +1,182 @@
+name: Bug report (Linux)
+description: Report a bug on Linux
+title: "[BUG][Linux] "
+labels:
+  - needs-review
+  - bug
+  - linux
+assignees:
+  - Wulgryn
+projects: "Wulgryn/9"
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for Linux-specific bug reports.
+
+  - type: textarea
+    id: short-description
+    attributes:
+      label: Short description
+      description: Briefly describe the problem.
+      placeholder: |
+        High resource usage when starting a search with empty parameters.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce-steps
+    attributes:
+      label: Reproduce steps
+      description: List the exact steps to reproduce the issue.
+      value: |
+        1.
+        2.
+        3.
+        4.
+      render: markdown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: Which part is this issue most likely related to?
+      options:
+        - Not sure
+        - Frontend
+        - Backend
+    validations:
+      required: true
+
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: Distribution
+      description: Select the Linux distribution where the issue happened.
+      options:
+        - Ubuntu
+        - Fedora
+        - Arch Linux
+        - Debian
+        - Linux Mint
+        - Pop!_OS
+        - openSUSE
+        - Nobara
+        - Other...
+    validations:
+      required: true
+
+  - type: input
+    id: other-distribution
+    attributes:
+      label: Other distribution
+      description: If you selected "Other...", write the distribution name here.
+      placeholder: e.g. CachyOS, EndeavourOS, Bazzite
+    validations:
+      required: false
+
+  - type: dropdown
+    id: desktop-environment
+    attributes:
+      label: Desktop environment
+      description: Useful for GUI-related Linux issues.
+      options:
+        - GNOME
+        - KDE Plasma
+        - Xfce
+        - Cinnamon
+        - MATE
+        - LXQt
+        - Sway
+        - Hyprland
+        - Other...
+    validations:
+      required: false
+
+  - type: input
+    id: other-desktop-environment
+    attributes:
+      label: Other desktop environment
+      description: If you selected "Other...", write the desktop environment here.
+      placeholder: e.g. Budgie, COSMIC, i3
+    validations:
+      required: false
+
+  - type: dropdown
+    id: display-server
+    attributes:
+      label: Display server
+      description: Useful for graphical Linux issues.
+      options:
+        - Wayland
+        - X11
+        - Not sure
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Choose how urgent this is. This will be synced to the project Priority field.
+      options:
+        - Backlog - low impact bug
+        - Very low - minimal impact
+        - Low - minor issue
+        - Medium - clear issue
+        - High - major problem
+        - Critical - blocks core usage
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression
+      description: Did this work correctly before?
+      options:
+        - Not sure
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+      placeholder: |
+        The empty search should not start, or a validation error should be shown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: What actually happened?
+      placeholder: |
+        The system continued running and used a high amount of resources.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: Paste logs or error messages if available.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add anything else that may help.
+    validations:
+      required: false

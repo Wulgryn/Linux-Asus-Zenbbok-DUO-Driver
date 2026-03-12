@@ -1,0 +1,305 @@
+name: Issue labels and project sync
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage-and-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sync labels
+        id: labels
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+            const body = context.payload.issue.body || "";
+            const title = (context.payload.issue.title || "").toLowerCase();
+
+            const labelDefinitions = {
+              "needs-review": { color: "ededed", description: "Needs manual review" },
+              bug: { color: "d73a4a", description: "Bug report" },
+              feature: { color: "a2eeef", description: "Feature request" },
+              question: { color: "d876e3", description: "Question" },
+              windows: { color: "1d76db", description: "Windows related" },
+              linux: { color: "0e8a16", description: "Linux related" },
+              frontend: { color: "fbca04", description: "Frontend related" },
+              backend: { color: "5319e7", description: "Backend related" },
+              "not-sure": { color: "cfd3d7", description: "Source is not yet known" },
+              regression: { color: "b60205", description: "Used to work before and now fails" }
+            };
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description
+                  });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            for (const [name, def] of Object.entries(labelDefinitions)) {
+              await ensureLabel(name, def.color, def.description);
+            }
+
+            function extractSection(label) {
+              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const regex = new RegExp(`^### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |$)`, "m");
+              const match = body.match(regex);
+              return match ? match[1].trim() : "";
+            }
+
+            const currentLabelsResponse = await github.rest.issues.listLabelsOnIssue({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+
+            const currentLabels = currentLabelsResponse.data.map(label => label.name);
+
+            const existingType = currentLabels.find(name => ["bug", "feature", "question"].includes(name)) || "";
+            const existingOs = currentLabels.find(name => ["windows", "linux"].includes(name)) || "";
+
+            let inferredType = "";
+            if (title.includes("[bug]")) inferredType = "bug";
+            if (title.includes("[feature]")) inferredType = "feature";
+            if (title.includes("[question]")) inferredType = "question";
+
+            let inferredOs = "";
+            if (title.includes("[windows]")) inferredOs = "windows";
+            if (title.includes("[linux]")) inferredOs = "linux";
+
+            const osFromBody = extractSection("Operating system");
+            if (osFromBody === "Windows") inferredOs = "windows";
+            if (osFromBody === "Linux") inferredOs = "linux";
+
+            const sourceRaw = extractSection("Source");
+            let sourceLabel = "";
+            if (sourceRaw === "Frontend") sourceLabel = "frontend";
+            if (sourceRaw === "Backend") sourceLabel = "backend";
+            if (sourceRaw === "Not sure") sourceLabel = "not-sure";
+
+            const regressionRaw = extractSection("Regression");
+            const regressionLabel = regressionRaw === "Yes" ? "regression" : "";
+
+            const typeLabel = existingType || inferredType;
+            const osLabel = existingOs || inferredOs;
+
+            const desiredManagedLabels = ["needs-review"];
+            if (typeLabel) desiredManagedLabels.push(typeLabel);
+            if (osLabel) desiredManagedLabels.push(osLabel);
+            if (sourceLabel) desiredManagedLabels.push(sourceLabel);
+            if (regressionLabel) desiredManagedLabels.push(regressionLabel);
+
+            const managedLabels = [
+              "needs-review",
+              "bug",
+              "feature",
+              "question",
+              "windows",
+              "linux",
+              "frontend",
+              "backend",
+              "not-sure",
+              "regression"
+            ];
+
+            const labelsToRemove = currentLabels.filter(
+              name => managedLabels.includes(name) && !desiredManagedLabels.includes(name)
+            );
+
+            for (const labelName of labelsToRemove) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number,
+                  name: labelName
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+            const labelsToAdd = desiredManagedLabels.filter(name => !currentLabels.includes(name));
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: labelsToAdd
+              });
+            }
+
+            const priorityRaw = extractSection("Priority");
+            const priorityMap = {
+              "Critical - blocks core usage": "P0",
+              "High - major problem": "P1",
+              "Medium - clear issue": "P2",
+              "Low - minor issue": "P3",
+              "Very low - minimal impact": "P4",
+              "Backlog - low impact bug": "P5",
+
+              "Critical - required for release": "P0",
+              "High - strong user value": "P1",
+              "Medium - important improvement": "P2",
+              "Low - useful enhancement": "P3",
+              "Very low - minor enhancement": "P4",
+              "Backlog - future idea": "P5"
+            };
+
+            core.setOutput("priority", priorityMap[priorityRaw] || "");
+
+      - name: Add issue to project and sync project Priority
+        if: ${{ secrets.ISSUE_TRACKER_PROJECT_ID != '' && secrets.ISSUE_TRACKER_PROJECT_TOKEN != '' }}
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ secrets.ISSUE_TRACKER_PROJECT_ID }}
+          PRIORITY_VALUE: ${{ steps.labels.outputs.priority }}
+        with:
+          github-token: ${{ secrets.ISSUE_TRACKER_PROJECT_TOKEN }}
+          script: |
+            const projectId = process.env.PROJECT_ID;
+            const priorityValue = process.env.PRIORITY_VALUE || "";
+            const issueNodeId = context.payload.issue.node_id;
+
+            async function getExistingProjectItem(projectId, issueNodeId) {
+              const result = await github.graphql(`
+                query ($issueId: ID!) {
+                  node(id: $issueId) {
+                    ... on Issue {
+                      projectItems(first: 100) {
+                        nodes {
+                          id
+                          project {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, {
+                issueId: issueNodeId
+              });
+
+              const items = result.node?.projectItems?.nodes || [];
+              const existing = items.find(item => item.project?.id === projectId);
+              return existing ? existing.id : "";
+            }
+
+            let itemId = await getExistingProjectItem(projectId, issueNodeId);
+
+            if (!itemId) {
+              const addResult = await github.graphql(`
+                mutation AddItem($projectId: ID!, $contentId: ID!) {
+                  addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                    item {
+                      id
+                    }
+                  }
+                }
+              `, {
+                projectId,
+                contentId: issueNodeId
+              });
+
+              itemId = addResult.addProjectV2ItemById.item.id;
+            }
+
+            if (!priorityValue) {
+              core.info("No project Priority update was needed for this issue.");
+              return;
+            }
+
+            const fieldResult = await github.graphql(`
+              query ProjectFields($projectId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    fields(first: 50) {
+                      nodes {
+                        ... on ProjectV2FieldCommon {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, {
+              projectId
+            });
+
+            const fields = fieldResult.node.fields.nodes || [];
+            const priorityField = fields.find(field => field.name === "Priority" && Array.isArray(field.options));
+
+            if (!priorityField) {
+              core.setFailed('The project field named "Priority" was not found.');
+              return;
+            }
+
+            const matchingOption = priorityField.options.find(option => option.name === priorityValue);
+
+            if (!matchingOption) {
+              core.setFailed(`The project Priority option "${priorityValue}" was not found.`);
+              return;
+            }
+
+            await github.graphql(`
+              mutation SetPriority(
+                $projectId: ID!,
+                $itemId: ID!,
+                $fieldId: ID!,
+                $optionId: String!
+              ) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId,
+                    itemId: $itemId,
+                    fieldId: $fieldId,
+                    value: { singleSelectOptionId: $optionId }
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `, {
+              projectId,
+              itemId,
+              fieldId: priorityField.id,
+              optionId: matchingOption.id
+            });
