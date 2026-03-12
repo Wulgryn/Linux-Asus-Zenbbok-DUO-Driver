@@ -36,7 +36,6 @@ jobs:
               linux: { color: "0e8a16", description: "Linux related" },
               frontend: { color: "fbca04", description: "Frontend related" },
               backend: { color: "5319e7", description: "Backend related" },
-              "not-sure": { color: "cfd3d7", description: "Source is not yet known" },
               regression: { color: "b60205", description: "Used to work before and now fails" }
             };
 
@@ -98,7 +97,6 @@ jobs:
             let sourceLabel = "";
             if (sourceRaw === "Frontend") sourceLabel = "frontend";
             if (sourceRaw === "Backend") sourceLabel = "backend";
-            if (sourceRaw === "Not sure") sourceLabel = "not-sure";
 
             const regressionRaw = extractSection("Regression");
             const regressionLabel = regressionRaw === "Yes" ? "regression" : "";
@@ -121,7 +119,6 @@ jobs:
               "linux",
               "frontend",
               "backend",
-              "not-sure",
               "regression"
             ];
 
