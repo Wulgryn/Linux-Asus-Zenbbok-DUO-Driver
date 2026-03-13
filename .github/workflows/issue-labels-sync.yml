@@ -17,7 +17,6 @@ jobs:
 
     steps:
       - name: Sync labels
-        id: labels
         uses: actions/github-script@v8
         with:
           script: |
@@ -62,7 +61,7 @@ jobs:
             }
 
             function extractSection(label) {
-              const escaped = label.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
+              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
               const regex = new RegExp(`^### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |$)`, "m");
               const match = body.match(regex);
               return match ? match[1].trim() : "";
@@ -79,6 +78,8 @@ jobs:
 
             const existingType = currentLabels.find(name => ["bug", "feature", "question"].includes(name)) || "";
             const existingOs = currentLabels.find(name => ["windows", "linux"].includes(name)) || "";
+            const existingSource = currentLabels.find(name => ["frontend", "backend"].includes(name)) || "";
+            const existingRegression = currentLabels.includes("regression") ? "regression" : "";
 
             let inferredType = "";
             if (title.includes("[bug]")) inferredType = "bug";
@@ -94,12 +95,20 @@ jobs:
             if (osFromBody === "Linux") inferredOs = "linux";
 
             const sourceRaw = extractSection("Source");
-            let sourceLabel = "";
-            if (sourceRaw === "Frontend") sourceLabel = "frontend";
-            if (sourceRaw === "Backend") sourceLabel = "backend";
+            let parsedSource = "";
+            if (sourceRaw === "Frontend") parsedSource = "frontend";
+            if (sourceRaw === "Backend") parsedSource = "backend";
+            const sourceLabel = parsedSource || existingSource;
 
             const regressionRaw = extractSection("Regression");
-            const regressionLabel = regressionRaw === "Yes" ? "regression" : "";
+            let regressionLabel = "";
+            if (regressionRaw === "Yes") {
+              regressionLabel = "regression";
+            } else if (regressionRaw === "No" || regressionRaw === "Not sure") {
+              regressionLabel = "";
+            } else {
+              regressionLabel = existingRegression;
+            }
 
             const typeLabel = existingType || inferredType;
             const osLabel = existingOs || inferredOs;
