@@ -113,7 +113,7 @@ jobs:
             const typeLabel = existingType || inferredType;
             const osLabel = existingOs || inferredOs;
 
-            const desiredManagedLabels = ["needs-review"];
+            const desiredManagedLabels = [];
             if (typeLabel) desiredManagedLabels.push(typeLabel);
             if (osLabel) desiredManagedLabels.push(osLabel);
             if (sourceLabel) desiredManagedLabels.push(sourceLabel);
@@ -132,7 +132,10 @@ jobs:
             ];
 
             const labelsToRemove = currentLabels.filter(
-              name => managedLabels.includes(name) && !desiredManagedLabels.includes(name)
+              name =>
+                managedLabels.includes(name) &&
+                name !== "needs-review" &&
+                !desiredManagedLabels.includes(name)
             );
 
             for (const labelName of labelsToRemove) {
